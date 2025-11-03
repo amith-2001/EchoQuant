@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>EchoQuant Latency Test</title>
+  <style>
+    body { font-family: monospace; background-color: #0b0c10; color: #f1f1f1; padding: 20px; }
+    button { background: #00bfa5; border: none; padding: 10px 20px; margin: 10px; border-radius: 8px; color: #fff; cursor: pointer; font-size: 16px; }
+    pre { background: #1f2833; padding: 10px; border-radius: 8px; overflow-y: scroll; height: 250px; }
+    #latency { font-size: 18px; color: #66fcf1; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h2>🎙️ EchoQuant WebSocket Connection & Latency Test</h2>
+  <button id="startBtn">Start</button>
+  <button id="stopBtn">Stop</button>
+  <div>Latency: <span id="latency">--</span> ms</div>
+  <pre id="log"></pre>
+
+  <script>
+    let ws, ctx, proc, stream;
+    const packetTimes = new Map(); // track send times
+
+    const log = msg => {
+      const pre = document.getElementById("log");
+      pre.textContent += msg + "\n";
+      pre.scrollTop = pre.scrollHeight;
+    };
+
+    document.getElementById("startBtn").onclick = async () => {
+      ws = new WebSocket("ws://127.0.0.1:8000/stream");
+      ws.binaryType = "arraybuffer";
+
+      ws.onopen = () => log("✅ WebSocket connected to backend");
+
+      ws.onmessage = e => {
+        const msg = JSON.parse(e.data);
+        const now = performance.now();
+
+        // compute latency from stored send time
+        const sentAt = packetTimes.get(msg.packet_id);
+        if (sentAt) {
+          const latency = now - sentAt;
+          document.getElementById("latency").textContent = latency.toFixed(2);
+          log(`↩️  Echo: ${msg.echo_bytes} bytes | Latency: ${latency.toFixed(2)} ms`);
+          packetTimes.delete(msg.packet_id);
+        }
+      };
+
+      ws.onclose = () => log("❌ WebSocket closed");
+
+      // --- mic streaming ---
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      ctx = new AudioContext();
+      const input = ctx.createMediaStreamSource(stream);
+      proc = ctx.createScriptProcessor(4096, 1, 1);
+      input.connect(proc);
+      proc.connect(ctx.destination);
+
+      let packetId = 0;
+      proc.onaudioprocess = e => {
+        const data = e.inputBuffer.getChannelData(0);
+        const pcm16 = new Int16Array(data.length);
+        for (let i = 0; i < data.length; i++) pcm16[i] = data[i] * 0x7fff;
+        if (ws.readyState === WebSocket.OPEN) {
+          packetId++;
+          packetTimes.set(packetId, performance.now());
+          ws.send(JSON.stringify({ id: packetId, audio: Array.from(pcm16) }));
+        }
+      };
+    };
+
+    document.getElementById("stopBtn").onclick = () => {
+      if (ws) ws.close();
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      if (ctx) ctx.close();
+      log("🛑 Streaming stopped");
+    };
+  </script>
+</body>
+</html>

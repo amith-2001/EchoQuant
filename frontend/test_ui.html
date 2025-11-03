@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<body>
+<h2>EchoQuant Realtime</h2>
+<button id="startBtn">🎙️ Start</button>
+<button id="stopBtn">⏹️ Stop</button>
+<pre id="log"></pre>
+<script>
+let ws, audioCtx, source, processor, stream;
+document.getElementById('startBtn').onclick = async () => {
+  ws = new WebSocket("ws://localhost:8000/ping");
+  ws.binaryType = "arraybuffer";
+  ws.onmessage = e => {
+    if (typeof e.data === "string") {
+      const msg = JSON.parse(e.data);
+      if (msg.partial_text) document.getElementById('log').textContent = msg.partial_text;
+      if (msg.token) document.getElementById('log').textContent += msg.token;
+    } else {
+      audioCtx = audioCtx || new AudioContext();
+      audioCtx.decodeAudioData(e.data.slice(0)).then(buf => {
+        const src = audioCtx.createBufferSource();
+        src.buffer = buf;
+        src.connect(audioCtx.destination);
+        src.start();
+      });
+    }
+  };
+
+  stream = await navigator.mediaDevices.getUserMedia({audio:true});
+  audioCtx = new AudioContext();
+  const input = audioCtx.createMediaStreamSource(stream);
+  processor = audioCtx.createScriptProcessor(4096, 1, 1);
+  input.connect(processor);
+  processor.connect(audioCtx.destination);
+  processor.onaudioprocess = e => {
+    const data = e.inputBuffer.getChannelData(0);
+    const pcm16 = new Int16Array(data.length);
+    for (let i=0;i<data.length;i++) pcm16[i]=data[i]*0x7fff;
+    ws.send(pcm16.buffer);
+  };
+};
+
+document.getElementById('stopBtn').onclick = () => {
+  ws.close(); stream.getTracks().forEach(t=>t.stop());
+};
+</script>
+</body>
+</html>

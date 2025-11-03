@@ -1,0 +1,86 @@
+# ======================
+# Python / FastAPI / EchoQuant
+# ======================
+
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.env/
+.venv/
+env/
+ENV/
+
+# VS Code settings
+.vscode/
+.vscode/*
+.idea/
+
+# OS-specific junk
+.DS_Store
+Thumbs.db
+
+# Logs and caches
+*.log
+*.out
+*.pid
+*.gz
+*.tmp
+.cache/
+.pytest_cache/
+__pypackages__/
+
+# Jupyter / IPython
+.ipynb_checkpoints/
+*.ipynb
+
+# Environment files
+.env.local
+.env.production
+.env.development
+*.env
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Models / Large files
+models/
+checkpoints/
+*.gguf
+*.pt
+*.bin
+*.onnx
+
+# Audio or datasets
+data/
+dataset/
+*.wav
+*.mp3
+*.flac
+*.zip
+
+# FastAPI static/runtime files
+staticfiles/
+uploads/
+*.sqlite3
+
+# Docker / Deployment
+docker-compose.override.yml
+**/__pycache__/
+*.bak
+
+# Node / Frontend (if React UI added later)
+node_modules/
+npm-debug.log
+yarn-error.log
+dist/
+build/
+
+# Gradio / Temp
+gradio_cached_examples/
